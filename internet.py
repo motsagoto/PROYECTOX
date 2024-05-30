@@ -72,29 +72,77 @@ def crear_matriz(datos: pd.DataFrame) -> tuple:
 
 # Requerimiento 5 (listo)
 def cantidad_accesos_anio(matriz: tuple, anio: int) -> int:
-    """Calcula la cantidad total de accesos fijos a internet en un año dado."""
+    """
+    Calcula la cantidad total de accesos fijos a internet en un año dado.
+
+    Parámetros:
+    matriz (tuple): Tupla que contiene la matriz de datos y los diccionarios de años y departamentos.
+    anio (int): Año para el cual se quiere calcular la cantidad de accesos fijos.
+
+    Retorna:
+    int: Cantidad total de accesos fijos a internet en el año dado.
+    """
     _, anios_dict, _ = matriz
-    pos_anio = next((key for key, value in anios_dict.items() if value == anio), None)
+
+    # Encontrar la posición del año en el diccionario anios_dict
+    pos_anio = None
+    for key, value in anios_dict.items():
+        if value == anio:
+            pos_anio = key
+            break
+
+    # Si no se encuentra el año en el diccionario, retorna 0.
     if pos_anio is None:
         return 0
+
+    # Suma los accesos fijos de todas las filas (departamentos) en la columna correspondiente al año buscado.
     return sum(fila[pos_anio] for fila in matriz[0])
 
-# Requerimiento 6 (listo)
+# Requerimiento 6 (listo y corregido)
 def departamento_en_ascenso(matriz: tuple, anio: int, porcentaje: float) -> tuple:
-    """Determina el departamento con el mayor crecimiento en accesos fijos a internet entre dos años consecutivos."""
+    """
+    Determina el departamento con el mayor crecimiento en accesos fijos a internet entre dos años consecutivos.
+
+    Parámetros:
+    matriz (tuple): Tupla que contiene la matriz de datos y los diccionarios de años y departamentos.
+    anio (int): Año base para calcular el crecimiento.
+    porcentaje (float): Porcentaje mínimo de crecimiento.
+
+    Retorna:
+    tuple: Nombre del departamento y el porcentaje de crecimiento. Si no se encuentra ninguno, retorna ("Ninguno", -101).
+    """
     if anio >= 2023 or anio < 2015:
         return ("Ninguno", -101)
+
     matriz_final, anios_dict, dept_dict = matriz
-    pos_anio = next((key for key, value in anios_dict.items() if value == anio), None)
+
+    # Encontrar la posición del año en el diccionario anios_dict
+    pos_anio = None
+    for key, value in anios_dict.items():
+        if value == anio:
+            pos_anio = key
+            break
+
+    # Verifica si se encontró el año y si hay un año siguiente en el diccionario.
     if pos_anio is None or pos_anio + 1 not in anios_dict:
         return ("Ninguno", -101)
+
     max_cambio = ("Ninguno", -101)
+
+    # Itera sobre cada fila (departamento) en la matriz de datos.
     for i in range(len(dept_dict)):
-        if matriz_final[i][pos_anio] == 0:
-            continue
-        crecimiento = (matriz_final[i][pos_anio + 1] - matriz_final[i][pos_anio]) / matriz_final[i][pos_anio] * 100
-        if crecimiento > porcentaje and crecimiento > max_cambio[1]:
-            max_cambio = (dept_dict[i], crecimiento)
+        accesos_anio_base = matriz_final[i][pos_anio]
+        accesos_anio_siguiente = matriz_final[i][pos_anio + 1]
+
+        # Si el número de accesos fijos en el año base es mayor a 0, calcula el crecimiento.
+        if accesos_anio_base != 0:
+            # Cálculo del crecimiento porcentual de accesos fijos a internet.
+            crecimiento = ((accesos_anio_siguiente - accesos_anio_base) / accesos_anio_base) * 100
+
+            # Si el crecimiento es mayor al porcentaje especificado y es el mayor registrado, actualiza max_cambio.
+            if crecimiento > porcentaje and crecimiento > max_cambio[1]:
+                max_cambio = (dept_dict[i], crecimiento)
+
     return max_cambio
 
 # Funciones de ejecución
@@ -126,50 +174,60 @@ def ejecutar_cantidad_accesos_anio(matriz: tuple) -> None:
 def ejecutar_departamento_en_ascenso(matriz: tuple) -> None:
     anio = int(input("Por favor ingrese un año: "))
     porcentaje = float(input("Por favor ingrese un porcentaje: "))
-    departamento, crecimiento = departamento_en_ascenso(matriz, anio, porcentaje)
-    if departamento != "Ninguno":
-        print(departamento + " tuvo un crecimiento del " + str(round(crecimiento, 2)) + "% del año " + str(anio) + " al año " + str(anio + 1))
-    else:
-        print("No se encontró ningún departamento que supere el porcentaje especificado.")
+    resultado = departamento_en_ascenso(matriz, anio, porcentaje)
+    print("El departamento con mayor crecimiento en accesos fijos a internet es: " + resultado[0] + " con un crecimiento del " + str(resultado[1]) + "%.")
 
-def mostrar_menu():
-    """Imprime las opciones de ejecucion disponibles para el usuario."""
-    print("\nOpciones")
-    print("1. Cargar datos sobre el acceso a internet en Colombia.")
-    print("2. Mostrar Top 20 departamentos con mayor numero de accesos fijos a internet en un año.")
-    print("3. Mostrar Top 20 municipios con mayor numero de accesos fijos por población en un departamento.")
-    print("4. Mostrar diagrama de cajas con la distribución de accesos fijos a internet por provincia en un departamento.")
-    print("5. Construir matriz de Departamentos vs Año.")
-    print("6. Consultar la cantidad de accesos fijos a internet en un año.")
-    print("7. Consultar si existe un departamento en ascenso en un año dado.")
-    print("8. Salir.")
-
-def iniciar_aplicacion():
-    """Ejecuta el programa para el usuario."""
-    continuar = True
+def menu() -> None:
     datos = None
     matriz = None
-    while continuar:
-        mostrar_menu()
-        opcion_seleccionada = int(input("Por favor seleccione una opción: "))
-        if opcion_seleccionada == 1:
-            datos = ejecutar_cargar_datos()
-        elif opcion_seleccionada == 2 and datos is not None:
-            ejecutar_piechart_anio(datos, 0)
-        elif opcion_seleccionada == 3 and datos is not None:
-            ejecutar_diagrama_barras(datos, "")
-        elif opcion_seleccionada == 4 and datos is not None:
-            ejecutar_diagrama_cajas(datos, "")
-        elif opcion_seleccionada == 5 and datos is not None:
-            matriz = ejecutar_crear_matriz(datos)
-        elif opcion_seleccionada == 6 and matriz is not None:
-            ejecutar_cantidad_accesos_anio(matriz)
-        elif opcion_seleccionada == 7 and matriz is not None:
-            ejecutar_departamento_en_ascenso(matriz)
-        elif opcion_seleccionada == 8:
-            continuar = False
-        else:
-            print("Por favor seleccione una opción válida.")
+    while True:
+        print("\n--- Menú ---")
+        print("1. Cargar datos")
+        print("2. Generar gráfico de pastel por año")
+        print("3. Generar diagrama de barras por departamento")
+        print("4. Generar diagrama de cajas por departamento")
+        print("5. Crear matriz de accesos fijos a internet")
+        print("6. Calcular cantidad de accesos fijos a internet en un año")
+        print("7. Determinar departamento en ascenso")
+        print("8. Salir")
+        opcion = input("Seleccione una opción: ")
 
-# PROGRAMA PRINCIPAL
-iniciar_aplicacion()
+        if opcion == "1":
+            datos = ejecutar_cargar_datos()
+        elif opcion == "2":
+            if datos is not None:
+                ejecutar_piechart_anio(datos, 0)
+            else:
+                print("Primero debe cargar los datos.")
+        elif opcion == "3":
+            if datos is not None:
+                ejecutar_diagrama_barras(datos, "")
+            else:
+                print("Primero debe cargar los datos.")
+        elif opcion == "4":
+            if datos is not None:
+                ejecutar_diagrama_cajas(datos, "")
+            else:
+                print("Primero debe cargar los datos.")
+        elif opcion == "5":
+            if datos is not None:
+                matriz = ejecutar_crear_matriz(datos)
+            else:
+                print("Primero debe cargar los datos.")
+        elif opcion == "6":
+            if matriz is not None:
+                ejecutar_cantidad_accesos_anio(matriz)
+            else:
+                print("Primero debe crear la matriz.")
+        elif opcion == "7":
+            if matriz is not None:
+                ejecutar_departamento_en_ascenso(matriz)
+            else:
+                print("Primero debe crear la matriz.")
+        elif opcion == "8":
+            break
+        else:
+            print("Opción no válida. Por favor, intente nuevamente.")
+
+if __name__ == "__main__":
+    menu()
